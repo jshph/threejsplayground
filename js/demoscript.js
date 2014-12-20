@@ -23,7 +23,7 @@ controls.movementSpeed = 2.5;
 })()
 
 // ENVIRONMENT AND EFFECTS
-//scene.fog = new THREE.FogExp2(0xFFFFFF, .6);
+//scene.fog = new THREE.FogExp2(0xFFFFFF, 1);
 //skybox
 var imgPrefix = "img/jajlands2/jajlands2_";
 var imgExtension = ".jpg";
@@ -58,6 +58,23 @@ var material    = new THREE.MeshPhongMaterial({
 var object3d    = new THREE.Mesh(geometry, material)
 object3d.rotateX(-Math.PI/2)
 scene.add(object3d)
+
+//TUFTS OF GRASS
+var nTufts  = 5000
+var positions   = new Array(nTufts)
+for(var i = 0; i < nTufts; i++){
+    var position    = new THREE.Vector3()
+    position.x  = (Math.random()-0.5)*20
+    position.z  = (Math.random()-0.5)*20
+    positions[i]    = position
+}
+var mesh    = THREEx.createGrassTufts(positions)
+scene.add(mesh);
+// load the texture
+var textureUrl      = THREEx.createGrassTufts.baseUrl+'/img/images/grass01.png';
+var material        = mesh.material;
+material.map        = THREE.ImageUtils.loadTexture(textureUrl);
+material.alphaTest  = 0.7;
 
 function animate() {
     requestAnimationFrame(animate);
