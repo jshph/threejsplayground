@@ -5,16 +5,20 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor('lightblue', 1);
 document.body.appendChild(renderer.domElement);
 
-//var onRenderFcts= [];
+var onRenderFcts= [];
 var clock = new THREE.Clock();
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 1000);
 var controls = new THREE.FirstPersonControls(camera);
-camera.position.z = 1;
+camera.position.y = 1;
 controls.handleResize();
 controls.lookSpeed = 0.25;
-controls.movementSpeed = 2.5;
+controls.movementSpeed = 1.3;
+/*
+onRenderFcts.push(function() {
+    console.log(camera.position.x);
+})*/
 
 ;(function(){
     // add a ambient light
@@ -23,18 +27,22 @@ controls.movementSpeed = 2.5;
 })()
 
 // ENVIRONMENT AND EFFECTS
-//scene.fog = new THREE.FogExp2(0xFFFFFF, 1);
+//scene.fog = new THREE.FogExp2(0xFFFFFF, 0.3);
 //skybox
 var imgPrefix = "img/jajlands2/jajlands2_";
 var imgExtension = ".jpg";
 var directions = ["right", "left", "top", "", "front", "back"];
-var skyGeom = new THREE.CubeGeometry(1000,1000,1000);
+var skyGeom = new THREE.BoxGeometry(1000,1000,1000);
+//skyGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,-skyGeom.height/2,0));
 var materialAry = [];
 for (var i = 0; i < 6; i++) {
-    materialAry.push(new THREE.MeshBasicMaterial({
-        map:THREE.ImageUtils.loadTexture(imgPrefix + directions[i] + imgExtension),
-        side: THREE.BackSide //Deprecated code?
-    }));
+    if (directions[i] != "")
+        materialAry.push(new THREE.MeshBasicMaterial({
+            map:THREE.ImageUtils.loadTexture(imgPrefix + directions[i] + imgExtension),
+            side: THREE.BackSide //Deprecated code?
+        }));
+    else
+        materialAry.push(new THREE.MeshBasicMaterial());
 }
 var skyMaterial = new THREE.MeshFaceMaterial(materialAry);
 var skyBox = new THREE.Mesh(skyGeom, skyMaterial);
@@ -42,7 +50,7 @@ scene.add(skyBox);
 
 
 // GRASS FLOOR
-var textureUrl  = 'img/grasslight-small.jpg'
+/*var textureUrl  = 'img/grasslight-small.jpg'
 var texture = THREE.ImageUtils.loadTexture(textureUrl);
 texture.wrapS   = THREE.RepeatWrapping;
 texture.wrapT   = THREE.RepeatWrapping;
@@ -55,26 +63,99 @@ var material    = new THREE.MeshPhongMaterial({
     map : texture,
     emissive: 'green',
 })
-var object3d    = new THREE.Mesh(geometry, material)
-object3d.rotateX(-Math.PI/2)
-scene.add(object3d)
+var grassfloor    = new THREE.Mesh(geometry, material)
+grassfloor.rotateX(-Math.PI/2)
+scene.add(grassfloor)
+// lock floor
+onRenderFcts.push(function() {
+    grassfloor.position.copy({
+        x: camera.position.x,
+        y: camera.position.y-1,
+        z: camera.position.z
+    });
+});*/
 
-//TUFTS OF GRASS
-var nTufts  = 5000
-var positions   = new Array(nTufts)
-for(var i = 0; i < nTufts; i++){
-    var position    = new THREE.Vector3()
-    position.x  = (Math.random()-0.5)*20
-    position.z  = (Math.random()-0.5)*20
-    positions[i]    = position
+// X axes references (TEMP)
+var posxbox = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.1), new THREE.MeshBasicMaterial({color: 0xff0000}));
+posxbox.position.x = 2;
+scene.add(posxbox);
+var negxbox = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.1), new THREE.MeshBasicMaterial({color: 0x00ff00}));
+negxbox.position.x = -2;
+scene.add(negxbox);
+onRenderFcts.push(function() {
+    posxbox.position.z = camera.position.z;
+    posxbox.position.y = camera.position.y;
+    posxbox.position.x = camera.position.x + 2;
+    negxbox.position.z = camera.position.z;
+    negxbox.position.y = camera.position.y;
+    negxbox.position.x = camera.position.x - 2;
+})
+
+///////////////////
+//TUFTS OF GRASS //
+///////////////////
+
+var RANGEOFVIEW = 4;
+var renderedFields_queue = [];
+
+//var grassSpan = {'x': 0, 'z': 0, 'y': camera.position.y}; // each element: center of the last added mesh layout. i.e. after init, first should be 20.
+onRenderFcts.push(function check_regenerateGrass(threshhold) {
+    var marginTH = 0.1;
+    var distanceFromMargin = Math.abs(camera.position.x % RANGEOFVIEW/2);
+    //console.log(distanceFromMargin + " " + camera.position.x);
+    if (distanceFromMargin < marginTH && Math.abs(camera.position.x) > 0) {
+        console.log(Math.abs(camera.position.x % RANGEOFVIEW/2))
+        console.log("generating!");
+        var fieldCenter = camera.position.x > 0 ? camera.position.x + 4 : camera.position.x - 4;
+        // else if at origin?
+        generateGrass(fieldCenter);
+    }
+});
+
+
+//Procedure for regeneration:
+// - select randomly from n pregenerated fields of grass to render.
+// - render field when A position passes some margin M from the borders of area A.
+// - remove a field when the area A around the camera no longer encompasses its center.
+// 
+// NECESSITIES:
+// - keep track of rendered field... ideally, depending on direction of movement, script knows
+//     that such field is the first to go. Otherwise, keep track of fields at boundaries.
+// - 
+function generateGrass(xPos) {
+    var nTufts  = 1000
+    var positions   = new Array(nTufts)
+    for(var i = 0; i < nTufts; i++){
+        var position    = new THREE.Vector3()
+        position.x  = (Math.random()-0.5)*RANGEOFVIEW;
+        position.z  = (Math.random()-0.5)*RANGEOFVIEW*2;
+        positions[i]    = position;
+    }
+    console.log(xPos);
+    var grassTuftsMesh    = THREEx.createGrassTufts(positions)
+    grassTuftsMesh.position.x = xPos;
+    console.log(grassTuftsMesh.position);
+    scene.add(grassTuftsMesh);
+
+    // load the texture
+    var textureUrl      = THREEx.createGrassTufts.baseUrl+'/img/images/grass01.png';
+    var material        = grassTuftsMesh.material;
+    material.map        = THREE.ImageUtils.loadTexture(textureUrl);
+    material.alphaTest  = 0.7;
+    // lock grass y
+    onRenderFcts.push(function() {
+        grassTuftsMesh.position.y = camera.position.y-1;
+    });
+
+    renderedFields_queue.push(grassTuftsMesh);
+    scene.remove(renderedFields_queue.shift());
 }
-var mesh    = THREEx.createGrassTufts(positions)
-scene.add(mesh);
-// load the texture
-var textureUrl      = THREEx.createGrassTufts.baseUrl+'/img/images/grass01.png';
-var material        = mesh.material;
-material.map        = THREE.ImageUtils.loadTexture(textureUrl);
-material.alphaTest  = 0.7;
+
+
+
+renderedFields_queue.push(generateGrass(-4));
+renderedFields_queue.push(generateGrass(0));
+renderedFields_queue.push(generateGrass(4));
 
 function animate() {
     requestAnimationFrame(animate);
@@ -83,6 +164,9 @@ function animate() {
 
 function render() {
     controls.update(clock.getDelta());
+
+    onRenderFcts.forEach(function(onRenderFct) { onRenderFct(); });
+
     renderer.render(scene, camera);
 }
 
