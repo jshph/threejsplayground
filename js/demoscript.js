@@ -51,7 +51,7 @@ DMN_Audio.prototype.play = function ( file ) {
 var clock = new THREE.Clock();
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 1000);
-var controls = new THREE.PointerLockControls(camera);
+var controls = new THREE.FirstPersonControls(camera);
 camera.position.y = .2;
 controls.handleResize();
 controls.noFly = true;
@@ -65,9 +65,13 @@ controls.movementSpeed = 2.5;
     scene.add( light )
 })()
 
-light = new THREE.DirectionalLight( 0xffffff );
-light.position.set( 0, 1, 0 ).normalize();
-scene.add( light );
+var light1 = new THREE.DirectionalLight( 0xffffff );
+light1.position.set( 1, 1, -2 ).normalize();
+scene.add( light1 );
+
+var light2 = new THREE.DirectionalLight( 0xffffff );
+light2.position.set( 1, 1, 2 ).normalize();
+scene.add( light2 );
 
 // ENVIRONMENT AND EFFECTS
 
@@ -122,11 +126,11 @@ scene.add(mesh);
 
 //SOUND
 var listener = new THREE.AudioListener();
-var sphere = new THREE.SphereGeometry( .2);
+var sphere = new THREE.SphereGeometry( .2,20,20);
 
 var material_sphere1 = new THREE.MeshLambertMaterial( { color: 0xffaa00, shading: THREE.FlatShading } );
 var mesh1 = new THREE.Mesh( sphere, material_sphere1 );
-mesh1.position.set( 0, .2,1 );
+mesh1.position.set( 0, .2,.577 );
 scene.add( mesh1 );
 var sound1 = new DMN_Audio( listener );
 
@@ -138,7 +142,7 @@ var sound2 = new DMN_Audio( listener );
 
 material_sphere3 = new THREE.MeshLambertMaterial( { color: 0xff7700, shading: THREE.FlatShading } );
 var mesh3 = new THREE.Mesh( sphere, material_sphere2 );
-mesh3.position.set( -1, .2, 0 );
+mesh3.position.set( 0, .2, -.577 );
 scene.add( mesh3 );
 var sound3 = new DMN_Audio( listener );
 
