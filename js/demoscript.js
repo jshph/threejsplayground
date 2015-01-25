@@ -4,16 +4,59 @@ var renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor('lightblue', 1);
 document.body.appendChild(renderer.domElement);
+loaded_count = 0;
+allSounds = [];
+
+playAllSounds = function() {
+    for (var i = 0; i < allSounds.length; i++){
+        console.log(allSounds)
+        allSounds[i].play()
+    }
+}
+
+//AUDIOOBJECT
+DMN_Audio = function(listener) {
+    THREE.Audio.call(this,listener);
+};
+DMN_Audio.prototype = Object.create(THREE.Audio.prototype)
+
+DMN_Audio.prototype.load = function ( file ) {
+    var scope = this;
+    var request = new XMLHttpRequest();
+    request.open( 'GET', file, true );
+    request.responseType = 'arraybuffer';
+    request.onload = function ( e ) {
+
+        scope.context.decodeAudioData( this.response, function ( buffer ) {
+            scope.source.buffer = buffer;
+            scope.source.connect( scope.panner );
+            loaded_count++;
+            allSounds.push(scope)
+            if (loaded_count>=3) {
+                playAllSounds();
+            }
+        } );
+
+    };
+    request.send();
+    return this;
+};
+
+DMN_Audio.prototype.play = function ( file ) {
+    var scope = this;
+    scope.source.start( 0 );
+};
 
 //var onRenderFcts= [];
 var clock = new THREE.Clock();
-
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 1000);
-var controls = new THREE.FirstPersonControls(camera);
-camera.position.z = 1;
+var controls = new THREE.PointerLockControls(camera);
+camera.position.y = .2;
 controls.handleResize();
-controls.lookSpeed = 0.25;
+controls.noFly = true;
+controls.lookVertical=false;
+controls.lookSpeed = 0.07;
 controls.movementSpeed = 2.5;
 
 ;(function(){
@@ -22,7 +65,12 @@ controls.movementSpeed = 2.5;
     scene.add( light )
 })()
 
+light = new THREE.DirectionalLight( 0xffffff );
+light.position.set( 0, 1, 0 ).normalize();
+scene.add( light );
+
 // ENVIRONMENT AND EFFECTS
+
 //scene.fog = new THREE.FogExp2(0xFFFFFF, 1);
 //skybox
 var imgPrefix = "img/jajlands2/jajlands2_";
@@ -38,6 +86,7 @@ for (var i = 0; i < 6; i++) {
 }
 var skyMaterial = new THREE.MeshFaceMaterial(materialAry);
 var skyBox = new THREE.Mesh(skyGeom, skyMaterial);
+
 scene.add(skyBox);
 
 
@@ -70,12 +119,48 @@ for(var i = 0; i < nTufts; i++){
 }
 var mesh    = THREEx.createGrassTufts(positions)
 scene.add(mesh);
+
+//SOUND
+var listener = new THREE.AudioListener();
+var sphere = new THREE.SphereGeometry( .2);
+
+var material_sphere1 = new THREE.MeshLambertMaterial( { color: 0xffaa00, shading: THREE.FlatShading } );
+var mesh1 = new THREE.Mesh( sphere, material_sphere1 );
+mesh1.position.set( 0, .2,1 );
+scene.add( mesh1 );
+var sound1 = new DMN_Audio( listener );
+
+material_sphere2 = new THREE.MeshLambertMaterial( { color: 0xff2200, shading: THREE.FlatShading } );
+var mesh2 = new THREE.Mesh( sphere, material_sphere2 );
+mesh2.position.set( 1, .2, 0 );
+scene.add( mesh2 );
+var sound2 = new DMN_Audio( listener );
+
+material_sphere3 = new THREE.MeshLambertMaterial( { color: 0xff7700, shading: THREE.FlatShading } );
+var mesh3 = new THREE.Mesh( sphere, material_sphere2 );
+mesh3.position.set( -1, .2, 0 );
+scene.add( mesh3 );
+var sound3 = new DMN_Audio( listener );
+
+mesh1.add( sound1 );
+mesh2.add( sound2 );
+mesh3.add( sound3 );
+sound1.load('../sounds/voice.mp3');
+sound2.load( '../sounds/drums.mp3' );
+sound3.load( '../sounds/keyboard.mp3' );
+sound1.setRefDistance( .2 );
+sound2.setRefDistance( .2 );
+sound3.setRefDistance( .2 );
+
+camera.add(listener)
+
 // load the texture
 var textureUrl      = THREEx.createGrassTufts.baseUrl+'/img/images/grass01.png';
 var material        = mesh.material;
 material.map        = THREE.ImageUtils.loadTexture(textureUrl);
 material.alphaTest  = 0.7;
 
+//ANIMATION
 function animate() {
     requestAnimationFrame(animate);
     render();
