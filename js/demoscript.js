@@ -96,20 +96,27 @@ onRenderFcts.push(function() {
 ///////////////////
 
 var RANGEOFVIEW = 4;
+var marginTH = 0.1
 var renderedFields_queue = [];
+var grassModels = [];
+var oldCamX = 0; // to generate delta to determine direction of grass generation.
 
 //var grassSpan = {'x': 0, 'z': 0, 'y': camera.position.y}; // each element: center of the last added mesh layout. i.e. after init, first should be 20.
-onRenderFcts.push(function check_regenerateGrass(threshhold) {
-    var marginTH = 0.1;
+onRenderFcts.push(function check_regenerateGrass() {
     var distanceFromMargin = Math.abs(camera.position.x % RANGEOFVIEW/2);
     //console.log(distanceFromMargin + " " + camera.position.x);
     if (distanceFromMargin < marginTH && Math.abs(camera.position.x) > 0) {
-        console.log(Math.abs(camera.position.x % RANGEOFVIEW/2))
+        //console.log(Math.abs(camera.position.x % RANGEOFVIEW/2))
         console.log("generating!");
-        var fieldCenter = camera.position.x > 0 ? camera.position.x + 4 : camera.position.x - 4;
-        // else if at origin?
-        generateGrass(fieldCenter);
+
+        var camDeltaX = camera.position.x - oldCamX;
+        
+        if (camDeltaX > 0)
+            generateGrass(camera.position.x + 4);
+        else if (camDeltaX < 0)
+            generateGrass(camera.position.x - 4);
     }
+    oldCamX = camera.position.x;
 });
 
 
@@ -123,6 +130,23 @@ onRenderFcts.push(function check_regenerateGrass(threshhold) {
 //     that such field is the first to go. Otherwise, keep track of fields at boundaries.
 // - 
 function generateGrass(xPos) {
+    // lock grass y
+    grassTuftsMesh = grassModels[Math.random()*3];
+    console.log(grassTuftsMesh);
+
+/*    onRenderFcts.push(function() {
+        grassTuftsMesh.position.y = camera.position.y-1;
+    });*/
+
+    //grassTuftsMesh.position.x = xPos;
+    throw "error!";
+
+    scene.add(grassTuftsMesh);
+    renderedFields_queue.push(grassTuftsMesh);
+    scene.remove(renderedFields_queue.shift());
+}
+
+function modelGrass() {
     var nTufts  = 1000
     var positions   = new Array(nTufts)
     for(var i = 0; i < nTufts; i++){
@@ -131,31 +155,31 @@ function generateGrass(xPos) {
         position.z  = (Math.random()-0.5)*RANGEOFVIEW*2;
         positions[i]    = position;
     }
-    console.log(xPos);
     var grassTuftsMesh    = THREEx.createGrassTufts(positions)
-    grassTuftsMesh.position.x = xPos;
-    console.log(grassTuftsMesh.position);
-    scene.add(grassTuftsMesh);
+    
+    // console.log(grassTuftsMesh.position);
+    console.log('initialized a field');
 
     // load the texture
     var textureUrl      = THREEx.createGrassTufts.baseUrl+'/img/images/grass01.png';
     var material        = grassTuftsMesh.material;
     material.map        = THREE.ImageUtils.loadTexture(textureUrl);
     material.alphaTest  = 0.7;
-    // lock grass y
-    onRenderFcts.push(function() {
-        grassTuftsMesh.position.y = camera.position.y-1;
-    });
-
-    renderedFields_queue.push(grassTuftsMesh);
-    scene.remove(renderedFields_queue.shift());
+    return grassTuftsMesh;
 }
 
+// prerender grass models
+grassModels.push(modelGrass());
+grassModels.push(modelGrass());
+grassModels.push(modelGrass());
 
-
+setTimeout(function() {
 renderedFields_queue.push(generateGrass(-4));
 renderedFields_queue.push(generateGrass(0));
 renderedFields_queue.push(generateGrass(4));
+}, 3000)
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function animate() {
     requestAnimationFrame(animate);

@@ -7,7 +7,7 @@ THREEx.createGrassTufts = function(positions){
   geometry.width = .4;
   geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 1, geometry.height/2, 1 ) );
 
-  console.log(geometry)
+  //console.log(geometry)
   // Tweat the normal for better lighting
   // - normals from http://http.developer.nvidia.com/GPUGems/gpugems_ch07.html
   // - normals inspired from http://simonschreibt.de/gat/airborn-trees/
